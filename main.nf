@@ -38,7 +38,7 @@ workflow {
         .map { files -> [ [id: 'ALL'], files, [], [], [], [] ] }
 
     MULTIQC_RAW(ch_multiqc_files)
-    ch_reads.view()
+    
     CUTADAPT(ch_reads)
     
     ch_trimmed = CUTADAPT.out.reads
@@ -51,4 +51,9 @@ workflow {
         .map { files -> [ [id: 'ALL'], files, [], [], [], [] ] }
     
     MULTIQC_TRIMMED(ch_multiqc_files)
+
+    ch_fasta = Channel.value([ [ id: 'genome' ], file(params.genome_fasta) ])
+    ch_gtf = Channel.value([ [id: 'genome' ], file(params.genome_gtf) ])
+
+    STAR_GENOMEGENERATE(ch_fasta, ch_gtf)
 }
