@@ -9,6 +9,7 @@ include { MULTIQC as MULTIQC_ALIGN } from './modules/nf-core/multiqc/main'
 include { CUTADAPT } from './modules/nf-core/cutadapt/main'
 include { STAR_GENOMEGENERATE } from './modules/nf-core/star/genomegenerate/main'
 include { STAR_ALIGN } from './modules/nf-core/star/align/main'
+include { IGVTOOLS_TOTDF } from './modules/local/igvtools/totdf/main.nf'
 
 
 def parse_samplesheet(csv_path) {
@@ -66,4 +67,10 @@ workflow {
         .map { files -> [ [id: 'ALL'], files, [], [], [], [] ] }
 
     MULTIQC_ALIGN(ch_multiqc_files)
+    
+    // STAR produces two .wig files, but we only need the first one (unique alignments)
+    ch_wig = STAR_ALIGN.out.wig
+        .map { meta, wigs -> [ meta, wigs[0] ] }
+
+    IGVTOOLS_TOTDF(ch_wig, ch_fasta)
 }
