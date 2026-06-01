@@ -9,7 +9,8 @@ include { MULTIQC as MULTIQC_ALIGN } from './modules/nf-core/multiqc/main'
 include { CUTADAPT } from './modules/nf-core/cutadapt/main'
 include { STAR_GENOMEGENERATE } from './modules/nf-core/star/genomegenerate/main'
 include { STAR_ALIGN } from './modules/nf-core/star/align/main'
-include { IGVTOOLS_TOTDF } from './modules/local/igvtools/totdf/main.nf'
+include { IGVTOOLS_TOTDF } from './modules/local/igvtools/totdf/main'
+include { MACS3_CALLPEAK } from './modules/nf-core/macs3/callpeak/main'
 
 
 def parse_samplesheet(csv_path) {
@@ -21,9 +22,10 @@ def parse_samplesheet(csv_path) {
                 id: row.sample_id,
                 donor: row.donor,
                 condition: row.condition,
+                replicate: row.replicate,
                 single_end: true
             ]
-            def reads = [ file(row.fastq_1) ]
+            def reads = [ file(row.fastq) ]
             [ meta, reads ]
         }
 }
@@ -73,4 +75,13 @@ workflow {
         .map { meta, wigs -> [ meta, wigs[0] ] }
 
     IGVTOOLS_TOTDF(ch_wig, ch_fasta)
+
+    ch_bam = STAR_ALIGN.out.bam_sorted_aligned
+        .map { meta, bam -> [ meta.donor, meta.condition, bam ] }
+        .groupTuple(by: [0, 1])
+        .map { donor, condition, bams ->
+            [ [id: "${donor}_${condition}_pooled", single_end: true], bams, [] ]
+        }
+    
+    MACS3_CALLPEAK(ch_bam, '1.5e+8')
 }
