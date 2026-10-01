@@ -89,47 +89,14 @@ workflow {
 
     IGVTOOLS_TOTDF(ch_wig, ch_fasta)
     
-    // Don't need to use the reference so pass placeholder as a second argument
-    //ch_dup = PICARD_MARKDUPLICATES(STAR_ALIGN.out.bam_sorted_aligned, [ '', [], [] ])
-    
-    //ch_multiqc_files = ch_dup.metrics
-    //    .map { meta, metrics -> metrics }
-    //    .collect()
-    //    .map { files -> [ [id: 'ALL'], files, [], [], [], [] ] }
-
-    //MULTIQC_MARKDUP(ch_multiqc_files)
-
-    //ch_bam = ch_dup.bam 
     ch_bam = STAR_ALIGN.out.bam_sorted_aligned
-    //    .map { meta, bam -> [ meta.group, meta.condition, bam ] }
-    //    .groupTuple(by: [0, 1])
-    //    .map { group, condition, bams -> [ [ id: group, condition: condition ], bams, [] ] }
-
-    //SAMTOOLS_MERGE(ch_bam, [ '', [], [], [] ])
     
-    //BEDTOOLS_BAMTOBED(SAMTOOLS_MERGE.out.bam)
     BEDTOOLS_BAMTOBED(ch_bam)
     BED_SORT(BEDTOOLS_BAMTOBED.out.bed)
     BEDTOOLS_COLLAPSE(BED_SORT.out.bed, '4')
     BEDTOOLS_BEDTOBAM(BEDTOOLS_COLLAPSE.out.bed, EXTRACT_CHROM_SIZES.out.chrom_sizes)
 
-    //ch_bam_ip = BEDTOOLS_BEDTOBAM.out.bam
-    //    .filter { meta, bed -> meta.condition == 'IP' }
-    
-    //ch_bam_input = BEDTOOLS_BEDTOBAM.out.bam
-    //    .filter { meta, bed -> meta.condition == 'INP' }
-
-    //ch_bam = ch_bam_ip.combine(ch_bam_input)
-    //    .map { meta, ipbam, meta2, controlbam -> [ [ id: meta.id, single_end: true ], ipbam, controlbam ] }
-    
     ch_bam = BEDTOOLS_BEDTOBAM.out.bam
         .map { meta, bam -> [ meta, bam, [] ] }
     MACS3_CALLPEAK(ch_bam, '1.5e+8')
-
-    //ch_idr = MACS3_CALLPEAK.out.peak
-    //    .map { meta, peaks -> peaks }
-    //    .collect()
-    //    .map { all_peaks -> [ [ id: 'merged' ], all_peaks, 'narrowPeak' ] }
-
-    //IDR(ch_idr)
 }
