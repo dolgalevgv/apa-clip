@@ -6,3 +6,6 @@ results/*
 work/*
 .nextflow/*
 .nextflow.log*
+# pixi environments
+.pixi/*
+!.pixi/config.toml
