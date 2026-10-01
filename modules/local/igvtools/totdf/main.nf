@@ -11,6 +11,7 @@ process IGVTOOLS_TOTDF {
 
     output:
     tuple val(meta), path("${meta.id}.tdf"), emit: tdf
+    tuple val("${task.process}"), val('igvtools'), eval("igvtools version 2>/dev/null | sed -n 's/^IGV Version \\([^ ]*\\).*/\\1/p'"), topic: versions, emit: versions_igvtools
 
     script:
     """

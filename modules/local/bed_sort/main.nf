@@ -7,6 +7,7 @@ process BED_SORT {
 
     output:
     tuple val(meta), path("${meta.id}.sorted.bed"), emit: bed
+    tuple val("${task.process}"), val('coreutils'), eval("sort --version | sed '1!d; s/.* //'"), topic: versions, emit: versions_coreutils
 
     script:
     """

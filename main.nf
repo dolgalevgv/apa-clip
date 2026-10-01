@@ -41,11 +41,27 @@ def parse_samplesheet(csv_path) {
 }
 
 
+def softwareVersionsToYAML(versions) {
+    def versions_by_process = versions
+        .groupBy { process, _tool, _version -> process.toString().tokenize(':').last() }
+        .collectEntries { process, entries ->
+            [ process, entries.collectEntries { _process, tool, version -> [ tool.toString(), version.toString() ] }.sort() ]
+        }
+        .sort()
+    versions_by_process['Workflow'] = [
+        (workflow.manifest.name): workflow.manifest.version.toString(),
+        Nextflow: workflow.nextflow.version.toString()
+    ]
+    return new org.yaml.snakeyaml.Yaml().dumpAsMap(versions_by_process)
+}
+
+
 workflow {
     ch_fastq = parse_samplesheet(params.samplesheet)
 
-    ch_fastq = CONCAT_FASTQ(ch_fastq)
-    
+    CONCAT_FASTQ(ch_fastq)
+    ch_fastq = CONCAT_FASTQ.out.reads
+
     FASTQC_RAW(ch_fastq)
     
     ch_multiqc_files = FASTQC_RAW.out.zip
@@ -99,4 +115,13 @@ workflow {
     ch_bam = BEDTOOLS_BEDTOBAM.out.bam
         .map { meta, bam -> [ meta, bam, [] ] }
     MACS3_CALLPEAK(ch_bam, '1.5e+8')
+
+    // Every process reports [ process, tool, version ] to the `versions` topic,
+    // except MultiQC, which has to be collected explicitly
+    channel.topic('versions')
+        .mix(MULTIQC_RAW.out.versions, MULTIQC_TRIMMED.out.versions, MULTIQC_ALIGN.out.versions)
+        .unique()
+        .collect(flat: false)
+        .map { versions -> softwareVersionsToYAML(versions) }
+        .collectFile(name: 'software_versions.yml', storeDir: "${params.outdir}/pipeline_info")
 }
